@@ -1,0 +1,174 @@
+<main class="chat-wrapper" role="main">
+
+    @if (!isJoined()) {
+        <div class="join-screen" role="region" aria-label="Rejoindre le tchat">
+            <div class="join-card">
+                <div class="join-card__header">
+                    <h1 class="join-card__title">Your Car Your Way : Chat</h1>
+                </div>
+
+                <form class="join-card__form" (ngSubmit)="joinRoom()" novalidate>
+
+                    <div class="form-group">
+                        <label for="username" class="form-label">Votre pseudonyme</label>
+                        <input
+                            id="username"
+                            name="username"
+                            type="text"
+                            class="form-input"
+                            placeholder="ex : Alice"
+                            [ngModel]="username()"
+                            (ngModelChange)="username.set($event)"
+                            maxlength="50"
+                            autocomplete="nickname"
+                            aria-required="true"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="roomId" class="form-label">Salle (ID de réservation)</label>
+                        <input
+                            id="roomId"
+                            name="roomId"
+                            type="text"
+                            class="form-input"
+                            placeholder="ex : booking-42"
+                            [ngModel]="roomId()"
+                            (ngModelChange)="roomId.set($event)"
+                            maxlength="50"
+                            aria-required="true"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn--primary btn--full"
+                        [disabled]="!username().trim() || !roomId().trim()"
+                        aria-label="Rejoindre la salle de tchat"
+                    >
+                        Rejoindre le tchat
+                    </button>
+
+                </form>
+            </div>
+        </div>
+    }
+
+    @if (isJoined()) {
+        <div class="chat-layout">
+
+            <header class="chat-header">
+                <div class="chat-header__info">
+                <h2 class="chat-header__room">
+                    Salle : <strong>{{ roomId() }}</strong>
+                </h2>
+                <span class="chat-header__user">Connecté en tant que <strong>{{ username() }}</strong></span>
+                </div>
+
+                <div
+                class="connection-badge"
+                [class.connection-badge--connected]="isConnected()"
+                [class.connection-badge--connecting]="connectionState() === 'CONNECTING'"
+                [class.connection-badge--error]="connectionState() === 'ERROR'"
+                [attr.aria-label]="'État de connexion : ' + connectionState()"
+                role="status"
+                >
+                <span class="connection-badge__dot" aria-hidden="true"></span>
+                {{ connectionState() }}
+                </div>
+            </header>
+
+            <section
+                class="chat-messages"
+                #messagesContainer
+                aria-live="polite"
+                aria-label="Messages du tchat"
+                aria-atomic="false"
+                aria-relevant="additions"
+            >
+                @if (messages().length === 0) {
+                    <p class="chat-messages__empty">
+                        Aucun message pour l'instant. Soyez le premier à écrire !
+                    </p>
+                }
+
+                @for (msg of messages(); track msg.timestamp) {
+
+                    @if (msg.type === 'JOIN' || msg.type === 'LEAVE') {
+                        <div class="msg-system" role="status">
+                            {{ msg.content }}
+                        </div>
+                    }
+
+                    @if (msg.type === 'CHAT') {
+                        <div
+                            class="msg"
+                            [class.msg--own]="isOwnMessage(msg)"
+                            [class.msg--other]="!isOwnMessage(msg)"
+                        >
+                            @if (!isOwnMessage(msg)) {
+                                <span class="msg__sender">{{ msg.sender }}</span>
+                            }
+                            <div class="msg__bubble">
+                                <p class="msg__content">{{ msg.content }}</p>
+                                <time
+                                    class="msg__time"
+                                    [attr.datetime]="msg.timestamp"
+                                    [attr.aria-label]="'Envoyé à ' + formatTime(msg.timestamp)"
+                                    >
+                                    {{ formatTime(msg.timestamp) }}
+                                </time>
+                            </div>
+                        </div>
+                    }
+
+                }
+            </section>
+
+            <div
+                class="typing-indicator"
+                role="status"
+                aria-live="polite"
+                aria-label="Indicateur de frappe"
+            >
+                @if (typingLabel()) {
+                <span class="typing-indicator__text">
+                    <span class="typing-indicator__dots" aria-hidden="true">
+                        <span></span><span></span><span></span>
+                    </span>
+                    {{ typingLabel() }}
+                </span>
+                }
+            </div>
+
+            <footer class="chat-input-bar">
+                <label for="messageInput" class="sr-only">Saisir un message</label>
+                <input
+                    #messageInput
+                    id="messageInput"
+                    type="text"
+                    class="chat-input-bar__field"
+                    placeholder="Écrire un message… (Entrée pour envoyer)"
+                    [ngModel]="messageText()"
+                    (ngModelChange)="messageText.set($event)"
+                    (keydown)="onKeydown($event)"
+                    (input)="onTyping()"
+                    [disabled]="!isConnected()"
+                    maxlength="1000"
+                    autocomplete="off"
+                    aria-label="Champ de saisie du message"
+                />
+                <button
+                    type="button"
+                    class="btn btn--primary"
+                    (click)="sendMessage()"
+                    [disabled]="!messageText().trim() || !isConnected()"
+                    aria-label="Envoyer le message"
+                >
+                    Envoyer
+                </button>
+            </footer>
+
+        </div>
+    }
+</main>

@@ -1,0 +1,47 @@
+# Docker Compose — Environnement de développement YCYW Chat PoC
+#
+# Lance le backend Spring Boot et le frontend Angular dans des conteneurs.
+# Usage : docker compose up --build
+#
+# Ports exposés :
+#   - 4200 → frontend Angular
+#   - 8080 → backend Spring Boot (API REST + WebSocket)
+
+services:
+
+  # ── Backend Spring Boot 4 / Java 25 ─────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ycyw-chat-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ycyw-network
+
+  # ── Frontend Angular 21 ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ycyw-chat-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - ycyw-network
+
+networks:
+  ycyw-network:
+    driver: bridge

@@ -1,0 +1,85 @@
+name: CI — YCYW Chat PoC
+
+# Déclenchement : sur chaque push et pull request vers main
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ── Backend : build + tests ────────────────────────────────────────────────
+  backend:
+    name: Backend (Spring Boot 4 / Java 25)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Installation de Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build et tests
+        working-directory: ./backend
+        run: mvn verify -q
+
+      - name: Publication du rapport de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: backend/target/surefire-reports/
+
+  # ── Frontend : lint + build ────────────────────────────────────────────────
+  frontend:
+    name: Frontend (Angular 21)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Installation de Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installation des dépendances
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build de production
+        working-directory: ./frontend
+        run: npm run build -- --configuration production
+
+  # ── Docker : vérification des images ─────────────────────────────────────
+  docker:
+    name: Docker Compose (smoke test)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Build des images Docker
+        run: docker compose build
+
+      - name: Démarrage des services (smoke test)
+        run: |
+          docker compose up -d
+          # Attente que le backend soit prêt (max 60s)
+          timeout 60 bash -c 'until curl -sf http://localhost:8080/actuator/health; do sleep 3; done'
+          echo "✅ Backend opérationnel"
+
+      - name: Arrêt des services
+        if: always()
+        run: docker compose down

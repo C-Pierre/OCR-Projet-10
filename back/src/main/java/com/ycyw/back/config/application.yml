@@ -1,0 +1,18 @@
+server:
+    port: 8080
+
+spring:
+    application:
+        name: ycyw-chat-poc
+
+logging:
+    level:
+        com.ycyw.chat: DEBUG
+        org.springframework.web.socket: INFO
+        org.springframework.messaging: INFO
+
+ycyw:
+    chat:
+        max-history-per-room: 50
+        # Délai en secondes avant de considérer un utilisteur inactif
+        typing-timeout-seconds: 3
