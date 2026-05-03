@@ -5,7 +5,6 @@ import com.ycyw.back.model.MessageType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,7 +20,7 @@ public class ChatRoomService {
     private final Map<String, Set<String>> roomMembers = new ConcurrentHashMap<>();
 
     /**
-     * @param message le message à enregistrer
+     * @param message
      */
     public void addMessage(ChatMessage message) {
         if (message.getType() != MessageType.CHAT) {
@@ -31,9 +30,8 @@ public class ChatRoomService {
         roomHistories.computeIfAbsent(message.getRoomId(), k -> new ArrayDeque<>());
         Deque<ChatMessage> history = roomHistories.get(message.getRoomId());
 
-        // Limite la taille de l'historique en mémoire
         if (history.size() >= maxHistoryPerRoom) {
-            history.pollFirst(); // supprime le plus ancien
+            history.pollFirst();
         }
         history.addLast(message);
 
@@ -42,8 +40,8 @@ public class ChatRoomService {
     }
 
     /**
-     * @param roomId identifiant de la salle
-     * @return liste des messages dans l'ordre chronologique
+     * @param roomId
+     * @return
      */
     public List<ChatMessage> getHistory(String roomId) {
         Deque<ChatMessage> history = roomHistories.get(roomId);
@@ -54,18 +52,18 @@ public class ChatRoomService {
     }
 
     /**
-     * @param roomId identifiant de la salle
-     * @param username pseudonyme de l'utilisateur
+     * @param roomId
+     * @param username
      */
     public void userJoined(String roomId, String username) {
         roomMembers.computeIfAbsent(roomId, k -> ConcurrentHashMap.newKeySet())
-                   .add(username);
+            .add(username);
         log.info("Utilisateur '{}' a rejoint la salle '{}'", username, roomId);
     }
 
     /**
-     * @param roomId identifiant de la salle
-     * @param username pseudonyme de l'utilisateur
+     * @param roomId
+     * @param username
      */
     public void userLeft(String roomId, String username) {
         Set<String> members = roomMembers.get(roomId);
@@ -76,8 +74,8 @@ public class ChatRoomService {
     }
 
     /**
-     * @param roomId identifiant de la salle
-     * @return ensemble des pseudonymes connectés
+     * @param roomId
+     * @return
      */
     public Set<String> getMembers(String roomId) {
         return Collections.unmodifiableSet(
@@ -86,7 +84,7 @@ public class ChatRoomService {
     }
 
     /**
-     * @return ensemble des roomIds actifs
+     * @return
      */
     public Set<String> getActiveRooms() {
         Set<String> rooms = new HashSet<>();

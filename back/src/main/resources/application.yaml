@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: back
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ycyw}
+    username: ${SPRING_DATASOURCE_USERNAME:ycyw_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:ycyw_dev_password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+logging:
+  level:
+    com.ycyw.chat: DEBUG
+    org.springframework.web.socket: INFO
+    org.springframework.messaging: INFO
+ycyw:
+  chat:
+    max-history-per-room: 50
+    typing-timeout-seconds: 3
+server:
+  port: 8080

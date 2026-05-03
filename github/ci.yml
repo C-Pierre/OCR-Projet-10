@@ -1,6 +1,5 @@
 name: CI — YCYW Chat PoC
 
-# Déclenchement : sur chaque push et pull request vers main
 on:
   push:
     branches: [main, develop]
@@ -9,7 +8,7 @@ on:
 
 jobs:
 
-  # ── Backend : build + tests ────────────────────────────────────────────────
+  # Backend : build + tests
   backend:
     name: Backend (Spring Boot 4 / Java 25)
     runs-on: ubuntu-latest
@@ -36,7 +35,7 @@ jobs:
           name: backend-test-report
           path: backend/target/surefire-reports/
 
-  # ── Frontend : lint + build ────────────────────────────────────────────────
+  # Frontend : lint + build
   frontend:
     name: Frontend (Angular 21)
     runs-on: ubuntu-latest
@@ -60,7 +59,7 @@ jobs:
         working-directory: ./frontend
         run: npm run build -- --configuration production
 
-  # ── Docker : vérification des images ─────────────────────────────────────
+  # Docker : vérification des images
   docker:
     name: Docker Compose (smoke test)
     runs-on: ubuntu-latest
@@ -78,7 +77,7 @@ jobs:
           docker compose up -d
           # Attente que le backend soit prêt (max 60s)
           timeout 60 bash -c 'until curl -sf http://localhost:8080/actuator/health; do sleep 3; done'
-          echo "✅ Backend opérationnel"
+          echo "Backend opérationnel"
 
       - name: Arrêt des services
         if: always()

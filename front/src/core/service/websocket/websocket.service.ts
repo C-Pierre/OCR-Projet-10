@@ -42,26 +42,25 @@ export class WebSocketService implements OnDestroy {
 
         this.stompClient = new Client({
 
-        webSocketFactory: () => new SockJS('/ws'),
+            webSocketFactory: () => new SockJS('/ws'),
 
-        reconnectDelay: 5000,
+            reconnectDelay: 5000,
 
-        onConnect: () => {
-            this._connectionState.set('CONNECTED');
-            this.subscribeToRoom(roomId, username);
-        },
+            onConnect: () => {
+                this._connectionState.set('CONNECTED');
+                this.subscribeToRoom(roomId, username);
+            },
 
-        onDisconnect: () => {
-            this._connectionState.set('DISCONNECTED');
-        },
+            onDisconnect: () => {
+                this._connectionState.set('DISCONNECTED');
+            },
 
-        onStompError: (frame) => {
-            console.error('[WebSocketService] Erreur STOMP :', frame);
-            this._connectionState.set('ERROR');
-        },
+            onStompError: (frame) => {
+                console.error('[WebSocketService] Erreur STOMP :', frame);
+                this._connectionState.set('ERROR');
+            },
 
-        // Désactiver les logs STOMP en production (trop verbeux)
-        debug: (msg) => console.debug('[STOMP]', msg),
+            debug: (msg) => console.debug('[STOMP]', msg),
         });
 
         this.stompClient.activate();
