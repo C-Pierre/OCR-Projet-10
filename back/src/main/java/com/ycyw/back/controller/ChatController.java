@@ -1,24 +1,23 @@
 package com.ycyw.back.controller;
 
-import com.ycyw.back.model.ChatMessage;
-import com.ycyw.back.model.MessageType;
-import com.ycyw.back.service.ChatRoomService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import lombok.RequiredArgsConstructor;
+import com.ycyw.back.model.ChatMessage;
+import com.ycyw.back.model.ChatMessage.OnChat;
+import com.ycyw.back.model.ChatMessage.OnPresence;
+import com.ycyw.back.service.ChatRoomService;
+import com.ycyw.back.service.ChatBroadcastService;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 
 @Slf4j
 @RestController
@@ -26,77 +25,40 @@ import java.util.Set;
 @RequestMapping("/api/chat")
 public class ChatController {
 
-    private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomService chatRoomService;
+    private final ChatBroadcastService broadcastService;
 
     @MessageMapping("/chat/{roomId}/send")
     public void sendMessage(
-            @DestinationVariable String roomId,
-            @Payload @Valid ChatMessage message) {
-
-        ChatMessage enriched = ChatMessage.builder()
-                .type(MessageType.CHAT)
-                .roomId(roomId)
-                .sender(message.getSender())
-                .content(message.getContent())
-                .timestamp(Instant.now())
-                .build();
-
-        chatRoomService.addMessage(enriched);
-
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, enriched);
-        log.debug("Message diffusé dans la salle {} par {}", roomId, enriched.getSender());
+        @DestinationVariable String roomId,
+        @Payload @Validated(OnChat.class) ChatMessage message
+    ) {
+        log.debug("Message reçu dans la salle {} par {}", roomId, message.getSender());
+        broadcastService.broadcast(chatRoomService.buildAndSendMessage(roomId, message));
     }
 
     @MessageMapping("/chat/{roomId}/join")
     public void joinRoom(
-            @DestinationVariable String roomId,
-            @Payload ChatMessage message) {
-
-        chatRoomService.userJoined(roomId, message.getSender());
-
-        ChatMessage notification = ChatMessage.builder()
-                .type(MessageType.JOIN)
-                .roomId(roomId)
-                .sender(message.getSender())
-                .content(message.getSender() + " a rejoint le tchat")
-                .timestamp(Instant.now())
-                .build();
-
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, notification);
+        @DestinationVariable String roomId,
+        @Payload @Validated(OnPresence.class) ChatMessage message
+    ) {
+        broadcastService.broadcast(chatRoomService.userJoined(roomId, message.getSender()));
     }
 
     @MessageMapping("/chat/{roomId}/leave")
     public void leaveRoom(
-            @DestinationVariable String roomId,
-            @Payload ChatMessage message) {
-
-        chatRoomService.userLeft(roomId, message.getSender());
-
-        ChatMessage notification = ChatMessage.builder()
-                .type(MessageType.LEAVE)
-                .roomId(roomId)
-                .sender(message.getSender())
-                .content(message.getSender() + " a quitté le tchat")
-                .timestamp(Instant.now())
-                .build();
-
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, notification);
+        @DestinationVariable String roomId,
+        @Payload @Validated(OnPresence.class) ChatMessage message
+    ) {
+        broadcastService.broadcast(chatRoomService.userLeft(roomId, message.getSender()));
     }
 
     @MessageMapping("/chat/{roomId}/typing")
     public void notifyTyping(
-            @DestinationVariable String roomId,
-            @Payload ChatMessage message) {
-
-        ChatMessage typingNotification = ChatMessage.builder()
-                .type(MessageType.TYPING)
-                .roomId(roomId)
-                .sender(message.getSender())
-                .timestamp(Instant.now())
-                .build();
-
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, typingNotification);
+        @DestinationVariable String roomId,
+        @Payload @Validated(OnPresence.class) ChatMessage message
+    ) {
+        broadcastService.broadcast(chatRoomService.buildTypingNotification(roomId, message.getSender()));
     }
 
     @GetMapping("/{roomId}/history")
@@ -112,9 +74,6 @@ public class ChatController {
     @GetMapping("/rooms")
     public Map<String, Object> getActiveRooms() {
         Set<String> rooms = chatRoomService.getActiveRooms();
-        return Map.of(
-            "rooms", rooms,
-            "count", rooms.size()
-        );
+        return Map.of("rooms", rooms, "count", rooms.size());
     }
 }

@@ -1,14 +1,12 @@
 package com.ycyw.back.model;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import lombok.Builder;
 import java.time.Instant;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
 
 @Data
 @Builder
@@ -16,17 +14,21 @@ import java.time.Instant;
 @AllArgsConstructor
 public class ChatMessage {
 
-    @NotNull
+    public interface OnChat {}
+    public interface OnPresence {}
+
     private MessageType type;
 
-    @NotBlank
+    @NotBlank(groups = {OnChat.class, OnPresence.class})
+    @Size(max = 100, groups = {OnChat.class, OnPresence.class})
     private String roomId;
 
-    @NotBlank
-    @Size(min = 1, max = 50)
+    @NotBlank(groups = {OnChat.class, OnPresence.class})
+    @Size(min = 1, max = 50, groups = {OnChat.class, OnPresence.class})
     private String sender;
 
-    @Size(max = 1000)
+    @NotBlank(groups = OnChat.class)
+    @Size(max = 1000, groups = OnChat.class)
     private String content;
 
     @Builder.Default

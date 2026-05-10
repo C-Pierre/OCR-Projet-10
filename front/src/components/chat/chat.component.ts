@@ -28,7 +28,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     readonly wsService = inject(WebSocketService);
 
     readonly username    = signal('');
-    readonly roomId      = signal('booking-42');
+    readonly roomId      = signal('');
     readonly messageText = signal('');
     readonly messages    = signal<ChatMessage[]>([]);
     readonly typingUsers = signal<Set<string>>(new Set());

@@ -6,9 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  POSTGRES_DB: ycyw
+  POSTGRES_USER: ycyw_user
+  CORS_ALLOWED_ORIGINS: http://localhost:4200
+  CORS_ALLOWED_METHODS: GET,POST,OPTIONS
+  SERVER_PORT: 8080
+
 jobs:
 
-  # Backend : build + tests
   backend:
     name: Backend (Spring Boot 4 / Java 25)
     runs-on: ubuntu-latest
@@ -35,7 +41,6 @@ jobs:
           name: backend-test-report
           path: backend/target/surefire-reports/
 
-  # Frontend : lint + build
   frontend:
     name: Frontend (Angular 21)
     runs-on: ubuntu-latest
@@ -55,11 +60,14 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Lint
+        working-directory: ./frontend
+        run: npm run lint
+
       - name: Build de production
         working-directory: ./frontend
         run: npm run build -- --configuration production
 
-  # Docker : vérification des images
   docker:
     name: Docker Compose (smoke test)
     runs-on: ubuntu-latest
@@ -69,15 +77,34 @@ jobs:
       - name: Checkout du code
         uses: actions/checkout@v4
 
+      - name: Création du .env pour Docker Compose
+        run: |
+          cat <<EOF > .env
+          POSTGRES_DB=${{ env.POSTGRES_DB }}
+          POSTGRES_USER=${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          SPRING_DATASOURCE_USERNAME=${{ env.POSTGRES_USER }}
+          SPRING_DATASOURCE_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          CORS_ALLOWED_ORIGINS=${{ env.CORS_ALLOWED_ORIGINS }}
+          CORS_ALLOWED_METHODS=${{ env.CORS_ALLOWED_METHODS }}
+          DEV_USERNAME=${{ secrets.DEV_USERNAME }}
+          DEV_PASSWORD=${{ secrets.DEV_PASSWORD }}
+          SERVER_PORT=${{ env.SERVER_PORT }}
+          EOF
+
       - name: Build des images Docker
         run: docker compose build
 
       - name: Démarrage des services (smoke test)
         run: |
           docker compose up -d
-          # Attente que le backend soit prêt (max 60s)
           timeout 60 bash -c 'until curl -sf http://localhost:8080/actuator/health; do sleep 3; done'
           echo "Backend opérationnel"
+
+      - name: Vérification des endpoints de diagnostic
+        run: |
+          curl -sf http://localhost:8080/api/chat/rooms
+          echo "Endpoint /rooms opérationnel"
 
       - name: Arrêt des services
         if: always()
